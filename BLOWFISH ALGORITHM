@@ -1,0 +1,66 @@
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+
+uint32_t P[18] = {
+    0x243F6A88, 0x85A308D3, 0x13198A2E, 0x03707344,
+    0xA4093822, 0x299F31D0, 0x082EFA98, 0xEC4E6C89,
+    0x452821E6, 0x38D01377, 0xBE5466CF, 0x34E90C6C,
+    0xC0AC29B7, 0xC97C50DD, 0x3F84D5B5, 0xB5470917,
+    0x9216D5D9, 0x8979FB1B
+};
+
+uint32_t S[4][256];  
+uint32_t F(uint32_t x) {
+    return ((x << 1) ^ (x >> 3)) + ((x << 4) ^ (x >> 5)); 
+}
+void blowfish_encrypt(uint32_t *L, uint32_t *R) {
+    for (int i = 0; i < 16; ++i) {
+        *L ^= P[i];
+        *R ^= F(*L);
+        uint32_t temp = *L;
+        *L = *R;
+        *R = temp;
+    }
+    uint32_t temp = *L;
+    *L = *R;
+    *R = temp;
+    *R ^= P[16];
+    *L ^= P[17];
+}
+void blowfish_decrypt(uint32_t *L, uint32_t *R) {
+    for (int i = 17; i > 1; --i) {
+        *L ^= P[i];
+        *R ^= F(*L);
+        uint32_t temp = *L;
+        *L = *R;
+        *R = temp;
+    }
+    uint32_t temp = *L;
+    *L = *R;
+    *R = temp;
+    *R ^= P[1];
+    *L ^= P[0];
+}
+
+void print_block(uint32_t L, uint32_t R) {
+    printf("Block: %08X %08X\n", L, R);
+}
+
+int main() {
+    uint32_t L = 0x01234567;
+    uint32_t R = 0x89ABCDEF;
+
+    printf("Original:\n");
+    print_block(L, R);
+
+    blowfish_encrypt(&L, &R);
+    printf("Encrypted:\n");
+    print_block(L, R);
+
+    blowfish_decrypt(&L, &R);
+    printf("Decrypted:\n");
+    print_block(L, R);
+
+    return 0;
+}
