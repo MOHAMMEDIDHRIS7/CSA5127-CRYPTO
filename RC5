@@ -1,0 +1,85 @@
+#include <stdio.h>
+#include <stdint.h>
+
+#define w 32             
+#define r 12             
+#define b 16             
+#define c (b / 4)        
+#define t (2 * (r + 1))  
+
+uint32_t S[t];           
+uint32_t P = 0xB7E15163; 
+uint32_t Q = 0x9E3779B9;
+
+uint32_t L[c];           
+
+uint32_t ROTL(uint32_t x, uint32_t y) {
+    return (x << (y & (w - 1))) | (x >> (w - (y & (w - 1))));
+}
+
+uint32_t ROTR(uint32_t x, uint32_t y) {
+    return (x >> (y & (w - 1))) | (x << (w - (y & (w - 1))));
+}
+
+void RC5_KeySchedule(uint8_t *K) {
+    int i, j, k;
+    uint32_t A, B;
+
+    for (i = 0; i < c; i++) {
+        L[i] = ((uint32_t *)K)[i];
+    }
+
+    S[0] = P;
+    for (i = 1; i < t; i++) {
+        S[i] = S[i - 1] + Q;
+    }
+
+    A = B = i = j = 0;
+    for (k = 0; k < 3 * t; k++) {
+        A = S[i] = ROTL(S[i] + A + B, 3);
+        B = L[j] = ROTL(L[j] + A + B, (A + B));
+        i = (i + 1) % t;
+        j = (j + 1) % c;
+    }
+}
+
+void RC5_Encrypt(uint32_t *pt, uint32_t *ct) {
+    uint32_t A = pt[0] + S[0];
+    uint32_t B = pt[1] + S[1];
+    for (int i = 1; i <= r; i++) {
+        A = ROTL(A ^ B, B) + S[2 * i];
+        B = ROTL(B ^ A, A) + S[2 * i + 1];
+    }
+    ct[0] = A;
+    ct[1] = B;
+}
+
+void RC5_Decrypt(uint32_t *ct, uint32_t *pt) {
+    uint32_t B = ct[1];
+    uint32_t A = ct[0];
+    for (int i = r; i >= 1; i--) {
+        B = ROTR(B - S[2 * i + 1], A) ^ A;
+        A = ROTR(A - S[2 * i], B) ^ B;
+    }
+    pt[1] = B - S[1];
+    pt[0] = A - S[0];
+}
+
+int main() {
+    uint8_t key[16] = {
+        0x91, 0x5F, 0x46, 0x19, 0xBE, 0x41, 0xB2, 0x51,
+        0x63, 0x55, 0xA5, 0x01, 0x10, 0xA9, 0xCE, 0x91
+    };
+    RC5_KeySchedule(key);
+
+    uint32_t plain[2] = {0x12345678, 0x9ABCDEF0};
+    uint32_t cipher[2], decrypted[2];
+
+    RC5_Encrypt(plain, cipher);
+    printf("Encrypted: %08X %08X\n", cipher[0], cipher[1]);
+
+    RC5_Decrypt(cipher, decrypted);
+    printf("Decrypted: %08X %08X\n", decrypted[0], decrypted[1]);
+
+    return 0;
+}
