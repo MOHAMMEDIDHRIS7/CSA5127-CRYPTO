@@ -1,0 +1,51 @@
+#include <stdio.h>
+#include <math.h>
+
+int gcd(int a, int b) {
+    if (b == 0)
+        return a;
+    return gcd(b, a % b);
+}
+int modInverse(int e, int phi) {
+    int d = 1;
+    while ((e * d) % phi != 1) {
+        d++;
+    }
+    return d;
+}
+int power(int base, int exp, int mod) {
+    int result = 1;
+    for (int i = 0; i < exp; i++) {
+        result = (result * base) % mod;
+    }
+    return result;
+}
+
+int main() {
+    int p = 3;  
+    int q = 11; 
+    int n = p * q; 
+    int phi = (p - 1) * (q - 1); 
+
+    int e = 7; 
+    while (gcd(e, phi) != 1) {
+        e++;
+    }
+
+    int d = modInverse(e, phi);
+
+    printf("Public Key: (e = %d, n = %d)\n", e, n);
+    printf("Private Key: (d = %d, n = %d)\n", d, n);
+
+    int msg;
+    printf("Enter message to encrypt (integer < %d): ", n);
+    scanf("%d", &msg);
+
+    int encrypted = power(msg, e, n);
+    printf("Encrypted Message: %d\n", encrypted);
+
+    int decrypted = power(encrypted, d, n);
+    printf("Decrypted Message: %d\n", decrypted);
+
+    return 0;
+}
