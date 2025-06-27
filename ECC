@@ -1,0 +1,84 @@
+#include <stdio.h>
+#define P  17   
+#define A  2
+#define B  2
+
+typedef struct {
+    int x;
+    int y;
+    int infinity;  
+} ECPoint;
+
+int mod_inverse(int a, int p) {
+    int t = 0, newt = 1;
+    int r = p, newr = a;
+    while (newr != 0) {
+        int quotient = r / newr;
+        int temp = newt;
+        newt = t - quotient * newt;
+        t = temp;
+
+        temp = newr;
+        newr = r - quotient * newr;
+        r = temp;
+    }
+    if (r > 1) return -1; 
+    if (t < 0) t += p;
+    return t;
+}
+
+ECPoint ecc_add(ECPoint p1, ECPoint p2) {
+    ECPoint r;
+
+    if (p1.infinity) return p2;
+    if (p2.infinity) return p1;
+
+    if (p1.x == p2.x && (p1.y != p2.y || p1.y == 0)) {
+        r.infinity = 1; 
+        return r;
+    }
+
+    int m;
+    if (p1.x == p2.x && p1.y == p2.y) {
+        int numerator = (3 * p1.x * p1.x + A) % P;
+        int denominator = mod_inverse(2 * p1.y, P);
+        m = (numerator * denominator) % P;
+    } else {
+        int numerator = (p2.y - p1.y + P) % P;
+        int denominator = mod_inverse((p2.x - p1.x + P) % P, P);
+        m = (numerator * denominator) % P;
+    }
+
+    r.x = (m * m - p1.x - p2.x + P * 2) % P;
+    r.y = (m * (p1.x - r.x) - p1.y + P * 2) % P;
+    r.infinity = 0;
+
+    return r;
+}
+
+ECPoint ecc_mul(ECPoint p, int k) {
+    ECPoint result = {0, 0, 1}; 
+    while (k > 0) {
+        if (k % 2 == 1)
+            result = ecc_add(result, p);
+        p = ecc_add(p, p);
+        k = k / 2;
+    }
+    return result;
+}
+
+int main() {
+    ECPoint G = {5, 1, 0};
+    int private_key = 7;
+    ECPoint public_key = ecc_mul(G, private_key);
+    printf("Private Key: %d\n", private_key);
+    printf("Public Key: (%d, %d)\n", public_key.x, public_key.y);
+    int other_private = 3;
+    ECPoint other_public = ecc_mul(G, other_private);
+    ECPoint shared1 = ecc_mul(other_public, private_key);
+    ECPoint shared2 = ecc_mul(public_key, other_private);
+    printf("Shared Secret (A's side): (%d, %d)\n", shared1.x, shared1.y);
+    printf("Shared Secret (B's side): (%d, %d)\n", shared2.x, shared2.y);
+
+    return 0;
+}
